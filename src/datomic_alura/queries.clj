@@ -29,4 +29,6 @@
 ; busca por preco
 (db/todos-produtos-por-preco db)
 
+; busca com pull
+(db/todos-produtos-completos db)
 

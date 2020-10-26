@@ -55,10 +55,24 @@
     (d/q query db)))
 
 
+; passar keys para nomes
 (defn todos-produtos-por-preco [db]
   (let [query '[:find ?nome ?preco
+                :keys produto/nome produto/preco
                 :where 
                   [?e :produto/preco ?preco]
                   [?e :produto/nome ?nome]]]
     (d/q query db)))
 
+
+; pull explicito
+; (defn todos-produtos-completos [db]
+;   (let [query '[:find (pull ?e [:produto/nome :produto/preco :produto/slug])
+;                 :where [?e :produto/nome]]]
+;     (d/q query db)))
+
+; busca todos os atributos
+(defn todos-produtos-completos [db]
+  (let [query '[:find (pull ?e [*])
+                :where [?e :produto/nome]]]
+    (d/q query db)))
