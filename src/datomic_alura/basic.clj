@@ -12,7 +12,6 @@
   (d/transact conn produtos))
 
 (d/transact conn [(model/novo-produto "Televisao" "/tv" 12000M)])
-
 ; response from datomic
 ; {:db-before datomic.db.Db@e34a31a,
 ;  :db-after datomic.db.Db@868c0282,

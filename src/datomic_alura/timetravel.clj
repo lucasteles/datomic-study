@@ -24,7 +24,6 @@
       resultado @(d/transact conn produtos)]
   (:db-after resultado))
 
-
 (def after (now))
 (def db (d/db conn))
 

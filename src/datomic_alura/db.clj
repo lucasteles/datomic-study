@@ -27,6 +27,12 @@
               :db/doc           "O preço de um produto com precisão monetária"}
              ])
 
+( def schema-com-palavra-chave [
+                                {:db/ident         :produto/palavra-chave
+                                 :db/valueType     :db.type/string
+                                 :db/cardinality   :db.cardinality/many }
+                                ])
+
 (defn cria-schema [conn]  (d/transact conn schema))
 
 (defn recria-banco []
@@ -42,7 +48,7 @@
 ; o $ é o db
 (defn todos-produtos-por-slug [db slug]
   (let [query '[:find ?entidade
-                :in $ ?slug-buscado 
+                :in $ ?slug-buscado
                 :where [?entidade :produto/slug ?slug-buscado]]
         ]
     (d/q query db slug)))
@@ -55,13 +61,12 @@
     (d/q query db)))
 
 
-; passar keys para nomes
-(defn todos-produtos-por-preco [db]
+(defn todos-produtos-com-preco [db]
   (let [query '[:find ?nome ?preco
                 :keys produto/nome produto/preco
-                :where 
-                  [?e :produto/preco ?preco]
-                  [?e :produto/nome ?nome]]]
+                :where
+                [?e :produto/preco ?preco]
+                [?e :produto/nome ?nome]]]
     (d/q query db)))
 
 
@@ -76,3 +81,24 @@
   (let [query '[:find (pull ?e [*])
                 :where [?e :produto/nome]]]
     (d/q query db)))
+
+
+; passar keys para nome
+(defn todos-produtos-por-preco [db preco-minimo-param]
+  (let [query '[:find ?nome ?preco
+                :keys produto/nome produto/preco
+                :in $ ?preco-minimo
+                :where
+                [?e :produto/preco ?preco]
+                [(> ?preco ?preco-minimo)]
+                [?e :produto/nome ?nome]]]
+    (d/q query db preco-minimo-param)))
+
+
+(defn todos-produtos-por-palavra-chave [db palavra-chave-param]
+  (let [query '[:find (pull ?e [*])
+                :in $ ?palavra-chave
+                :where [?e :produto/palavra-chave ?palavra-chave]]]
+    (d/q query db palavra-chave-param)))
+
+

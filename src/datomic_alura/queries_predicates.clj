@@ -1,8 +1,9 @@
-(ns datomic-alura.queries
+(ns datomic-alura.queries-predicates
   (:require [datomic-alura.db :as db]
             [datomic.api :as d]
             [datomic-alura.model :as model]
             [clojure.pprint :refer [pprint]]))
+
 
 (def conn (db/recria-banco))
 
@@ -14,21 +15,9 @@
       produtos [computador impressora teclado calculadora]]
   (d/transact conn produtos))
 
-; snapshot
 (def db (d/db conn))
+(db/todos-produtos-por-preco db 1000M)
+(db/todos-produtos-por-preco db 2000M)
 
-; buscar produtos
-(db/todos-produtos db)
 
-; busca com parametro
-(db/todos-produtos-por-slug db "/impressora")
-
-; busca campos da entidade
-(db/todos-slugs db)
-
-; busca por preco
-(db/todos-produtos-com-preco db)
-
-; busca com pull
-(db/todos-produtos-completos db)
 
