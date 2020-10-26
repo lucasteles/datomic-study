@@ -4,3 +4,5 @@
   #:produto {:nome nome
              :slug slug
              :preco preco})
+
+
