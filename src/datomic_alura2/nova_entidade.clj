@@ -5,18 +5,39 @@
             [clojure.pprint :refer [pprint]]))
 
 (def conn (db/recria-banco))
+
+(println "aplica novo squema com ref de categorias")
 (d/transact conn db/schema-categoria)
 
-(def eletronicos (model/nova-categoria "Eletronicos"))
-(def esportes (model/nova-categoria "Esportes"))
-@(d/transact conn [eletronicos esportes])
+(def id-cat-eletronicos (model/uuid))
+(def id-cat-esportes (model/uuid))
 
-(def categorias (db/todas-categorias (d/db conn)))
-categorias
+(let [eletronicos (model/nova-categoria id-cat-eletronicos "Eletronicos")
+      esportes (model/nova-categoria id-cat-esportes "Esportes")]
+  (println "transaciona categorias")
+  @(d/transact conn [eletronicos esportes]))
 
-(def computador  (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M))
-(def impressora  (model/novo-produto "Impressora" "/impressora" 1200M))
-(def calculadora { :produto/id (model/uuid) :produto/nome "Calculadora" :produto/preco 20M})
-(def teclado  (model/novo-produto  "Teclado Mecanico" "/teclado" 500M))
 
-@(d/transact conn [computador impressora teclado calculadora])
+(println "lista categorias")
+(db/todas-categorias (d/db conn))
+
+(def id-computador (model/uuid))
+(def id-xadres (model/uuid))
+
+(let [computador  (model/novo-produto id-computador "Computador Novo" "/computador_novo" 2499.10M)
+      xadres (model/novo-produto id-xadres "Xadres" "/xadres" 700M)]
+  @(d/transact conn [computador xadres]))
+
+(println "vincula referencia de categoria com produto")
+(d/transact conn [[:db/add
+                  [:produto/id id-computador]
+                  :produto/categoria [:categoria/id id-cat-eletronicos]]
+
+                  [:db/add
+                  [:produto/id id-xadres]
+                  :produto/categoria [:categoria/id id-cat-esportes]]
+                  ])
+
+
+(println "busca produtos")
+(db/todos-produtos (d/db conn))

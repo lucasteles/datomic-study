@@ -17,8 +17,9 @@
 
 (defn id-por-slug [slug]
   (->
-    (db/todos-produtos-por-slug (d/db conn) slug)
-    first first))
+    (d/db conn)
+    (db/todos-produtos-por-slug slug) 
+    ffirst))
 
 (def id-computador (id-por-slug "/computador_novo"))
 

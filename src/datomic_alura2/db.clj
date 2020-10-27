@@ -38,6 +38,10 @@
              ])
 
 (def schema-categoria [
+                       {:db/ident       :produto/categoria
+                        :db/valueType   :db.type/ref
+                        :db/cardinality :db.cardinality/one}
+
                        {:db/ident       :categoria/nome
                         :db/valueType   :db.type/string
                         :db/cardinality :db.cardinality/one }
@@ -48,12 +52,12 @@
                         :db/unique      :db.unique/identity}])
 
 
-(defn cria-schema [conn]  (d/transact conn schema))
+(defn cria-schema! [conn]  (d/transact conn schema))
 
 (defn recria-banco []
   (apaga-banco)
   (let [conn (abre-conexao)]
-    (cria-schema conn)
+    (cria-schema! conn)
     conn))
 
 
@@ -73,4 +77,49 @@
   (let [query '[:find (pull ?e [*])
                 :where [?e :categoria/id]]]
     (d/q query db)))
+
+(defn todos-nomes-de-produtos-e-categorias [db]
+  (let [query '[:find ?nome ?categoria
+                :keys produto categoria
+                :where
+                [?e :produto/nome ?nome]
+                [?e :produto/categoria ?categoria-id]
+                [?categoria-id :categoria/nome ?categoria]
+                ]]
+    (d/q query db)))
+
+
+(defn todos-produtos-por-categoria [db nome-categoria]
+  (let [query '[:find (pull ?produto
+                            [:produto/nome
+                             :produto/slug
+                             {:produto/categoria [ :categoria/nome ]}
+                             ])
+                :in $ ?nome-categoria
+                :where
+                [?categoria :categoria/nome ?nome-categoria]
+                [?produto :produto/categoria ?categoria]
+                ]]
+    (d/q query db nome-categoria)))
+
+(defn todos-produtos-por-categoria-completo [db nome-categoria]
+  (let [query '[:find (pull ?produto [* {:produto/categoria [*]}])
+                :in $ ?nome-categoria
+                :where
+                [?categoria :categoria/nome ?nome-categoria]
+                [?produto :produto/categoria ?categoria]
+                ]]
+    (d/q query db nome-categoria)))
+
+(defn todos-produtos-por-categoria-backward [db nome-categoria]
+  (let [query '[:find (pull ?categoria [:categoria/nome
+                                        { :produto/_categoria [:produto/nome :produto/slug] } ])
+                :in $ ?nome-categoria
+                :where [?categoria :categoria/nome ?nome-categoria]]]
+    (d/q query db nome-categoria)))
+
+
+
+
+
 
