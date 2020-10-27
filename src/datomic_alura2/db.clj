@@ -37,6 +37,17 @@
 
              ])
 
+(def schema-categoria [
+                       {:db/ident       :categoria/nome
+                        :db/valueType   :db.type/string
+                        :db/cardinality :db.cardinality/one }
+
+                       {:db/ident       :categoria/id
+                        :db/valueType   :db.type/uuid
+                        :db/cardinality :db.cardinality/one
+                        :db/unique      :db.unique/identity}])
+
+
 (defn cria-schema [conn]  (d/transact conn schema))
 
 (defn recria-banco []
@@ -49,7 +60,7 @@
 ; busca todos os atributos
 (defn todos-produtos [db]
   (let [query '[:find (pull ?e [*])
-                :where [?e :produto/nome]]]
+                :where [?e :produto/id]]]
     (d/q query db)))
 
 (defn busca-por-dbid [db id]
@@ -57,4 +68,9 @@
 
 (defn busca-por-id-produto [db id]
   (d/pull db '[*] [:produto/id id]))
+
+(defn todas-categorias [db]
+  (let [query '[:find (pull ?e [*])
+                :where [?e :categoria/id]]]
+    (d/q query db)))
 

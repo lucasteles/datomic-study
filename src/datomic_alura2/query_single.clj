@@ -31,3 +31,8 @@
 (println "buscando por produto id =" uuid-computer)
 (db/busca-por-id-produto db uuid-computer)
 
+(println "sobrescreve entidade se usar mesmo identificador")
+(d/transact conn [(model/novo-produto uuid-computer "Computador Velho" "/computador_velho" 0M)])
+
+(println "buscando por produto id (atualizado) =" uuid-computer)
+(db/busca-por-id-produto (d/db conn) uuid-computer)

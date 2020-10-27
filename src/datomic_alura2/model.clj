@@ -11,4 +11,9 @@
              :slug slug
              :preco preco}))
 
-
+(defn nova-categoria
+  ([nome]
+   (nova-categoria (uuid) nome))
+   ([uuid nome]
+    #:categoria { :id uuid
+                  :nome nome }))
