@@ -52,14 +52,27 @@
                         :db/unique      :db.unique/identity}])
 
 
-(defn cria-schema! [conn]  (d/transact conn schema))
-
 (defn recria-banco []
   (apaga-banco)
   (let [conn (abre-conexao)]
-    (cria-schema! conn)
+    (d/transact conn schema)
     conn))
 
+(defn recria-banco-completo! []
+  (let [conn (recria-banco)]
+    (d/transact conn schema-categoria)
+    conn))
+
+(defn atribui-categorias! [conn categoria produtos]
+  (let [add-categoria
+        (fn [produto] [:db/add
+                       [:produto/id (:produto/id produto)]
+                       :produto/categoria [:categoria/id (:categoria/id categoria)]])
+        transactions (map add-categoria produtos)]
+    @(d/transact conn transactions)))
+
+(defn inserir-entidades! [conn produtos]
+  @(d/transact conn produtos))
 
 ; busca todos os atributos
 (defn todos-produtos [db]
@@ -117,9 +130,6 @@
                 :in $ ?nome-categoria
                 :where [?categoria :categoria/nome ?nome-categoria]]]
     (d/q query db nome-categoria)))
-
-
-
 
 
 
