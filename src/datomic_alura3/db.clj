@@ -1,7 +1,8 @@
 (ns datomic-alura3.db
-  (:require 
+  (:require
     [datomic.api :as d]
     [schema.core :as s]
+    [clojure.walk :as walk]
     [datomic-alura3.model :as model]))
 
 (def db-uri "datomic:dev://localhost:4334/ecommerce")
@@ -60,26 +61,33 @@
         transactions (map add-categoria produtos)]
     @(d/transact conn transactions)))
 
-(s/defn inserir-produtos! [conn produtos :- [model/Produto]]
-  @(d/transact conn produtos))
+(s/defn atualiza-produtos!
+  ([conn produtos :- [model/Produto]]
+   @(d/transact conn produtos))
+  ; update parcial, bom para updates concorrentes
+  ([conn
+    produtos :- [model/Produto]
+    keywords :- [s/Keyword]]
+   (let [parcial (map #(select-keys % keywords) produtos)]
+     @(d/transact conn parcial))))
 
-(s/defn inserir-categorias! [conn categorias :- [model/Categoria]]
+(s/defn atualiza-categorias! [conn categorias :- [model/Categoria]]
   @(d/transact conn categorias))
 
 
 (defn cria-dados-exemplo [conn]
-    (let [; categorias
-          eletronicos (model/nova-categoria "Eletronicos")
-          esportes (model/nova-categoria "Esportes")
-          ; produtos
-          computador (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M)
-          xadres (model/novo-produto  "Xadres" "/xadres" 700M)
-          celular (model/novo-produto  "Celular" "/celular" 100M)
-          teclado (model/novo-produto  "Teclado" "/teclado" 100M)]
-      (inserir-categorias! conn [eletronicos esportes])
-      (inserir-produtos! conn [computador xadres celular teclado])
-      (atribui-categorias! conn eletronicos [computador celular teclado])
-      (atribui-categorias! conn esportes [xadres])))
+  (let [; categorias
+        eletronicos (model/nova-categoria "Eletronicos")
+        esportes (model/nova-categoria "Esportes")
+        ; produtos
+        computador (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M)
+        xadres (model/novo-produto  "Xadres" "/xadres" 700M)
+        celular (model/novo-produto  "Celular" "/celular" 100M)
+        teclado (model/novo-produto  "Teclado" "/teclado" 100M)]
+    (atualiza-categorias! conn [eletronicos esportes])
+    (atualiza-produtos! conn [computador xadres celular teclado])
+    (atribui-categorias! conn eletronicos [computador celular teclado])
+    (atribui-categorias! conn esportes [xadres])))
 
 
 (defn recria-banco []
@@ -90,10 +98,10 @@
 
 
 (defn remove-deep [key-set data]
-  (clojure.walk/prewalk (fn [node] (if (map? node)
-                                     (apply dissoc node key-set)
-                                     node))
-                        data))
+  (walk/prewalk (fn [node] (if (map? node)
+                             (apply dissoc node key-set)
+                             node))
+                data))
 
 (defn datomic->entidade [entidades]
   (remove-deep [:db/id] entidades))
@@ -103,16 +111,17 @@
   (let [query '[:find [(pull ?e [*]) ...]
                 :where [?e :categoria/id]]
         categorias (d/q query db)]
-   (datomic->entidade categorias)))
+    (datomic->entidade categorias)))
 
-
+(s/defn produto-por-id :- model/Produto
+  [db id :- java.util.UUID]
+  (->> [:produto/id id]
+       (d/pull db '[* { :produto/categoria [*]}])
+       (datomic->entidade)))
 
 (s/defn todos-produtos  :- [model/Produto] [db]
   (let [query '[:find [(pull ?e [* {:produto/categoria [*]}]) ...]
                 :where [?e :produto/id]]
         resultado (d/q query db)]
     (datomic->entidade resultado)))
-
-(defn busca-por-id-produto [db id]
-  (d/pull db '[*] [:produto/id id]))
 

@@ -9,6 +9,6 @@
 (def conn (db/recria-banco))
 (db/cria-dados-exemplo conn)
 
-(db/todos-produtos (d/db conn))
 (db/todas-categorias (d/db conn))
+(db/todos-produtos (d/db conn))
 
