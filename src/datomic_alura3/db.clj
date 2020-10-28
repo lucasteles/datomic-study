@@ -89,7 +89,6 @@
     conn))
 
 
-
 (defn remove-deep [key-set data]
   (clojure.walk/prewalk (fn [node] (if (map? node)
                                      (apply dissoc node key-set)
@@ -99,6 +98,7 @@
 (defn datomic->entidade [entidades]
   (remove-deep [:db/id] entidades))
 
+; find specs
 (s/defn todas-categorias :- [model/Categoria] [db]
   (let [query '[:find [(pull ?e [*]) ...]
                 :where [?e :categoria/id]]
@@ -107,10 +107,11 @@
 
 
 
-(defn todos-produtos [db]
-  (let [query '[:find (pull ?e [*])
-                :where [?e :produto/id]]]
-    (d/q query db)))
+(s/defn todos-produtos  :- [model/Produto] [db]
+  (let [query '[:find [(pull ?e [* {:produto/categoria [*]}]) ...]
+                :where [?e :produto/id]]
+        resultado (d/q query db)]
+    (datomic->entidade resultado)))
 
 (defn busca-por-id-produto [db id]
   (d/pull db '[*] [:produto/id id]))

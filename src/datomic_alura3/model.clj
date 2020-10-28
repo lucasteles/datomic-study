@@ -11,8 +11,8 @@
              :slug s/Str
              :preco BigDecimal
              :id  java.util.UUID
-             (s/optional-key :palavra-chave) [s/Str]
-             (s/optional-key :categoria) [Categoria] })
+             (s/optional-key :produto/palavra-chave) [s/Str]
+             (s/optional-key :produto/categoria) Categoria })
 
 (defn uuid [] (java.util.UUID/randomUUID))
 

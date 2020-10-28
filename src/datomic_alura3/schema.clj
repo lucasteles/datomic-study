@@ -12,6 +12,3 @@
 (db/todos-produtos (d/db conn))
 (db/todas-categorias (d/db conn))
 
-
-
-
