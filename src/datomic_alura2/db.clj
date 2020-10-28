@@ -136,11 +136,18 @@
 
 (defn resumo-produtos-por-categoria [db]
   (d/q '[:find ?nome (min ?preco) (max ?preco) (count ?preco) (sum ?preco)
-         :keys categoria minimo maximo quantidade total
+         ; :keys categoria minimo maximo quantidade total
          :with ?produto
          :where [?produto :produto/preco ?preco]
                 [?produto :produto/categoria ?categoria]
                 [?categoria :categoria/nome ?nome]] 
        db))
+
+(defn todos-produtos-mais-caros [db] 
+  (d/q '[:find (pull ?produto [*])
+         :where [(q '[:find (max ?preco)
+                      :where [_ :produto/preco ?preco]] 
+                    $) [[?preco]] ]
+                [?produto :produto/preco ?preco]] db))
 
 
