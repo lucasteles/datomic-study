@@ -61,19 +61,48 @@
         transactions (map add-categoria produtos)]
     @(d/transact conn transactions)))
 
-(s/defn atualiza-produtos!
-  ([conn produtos :- [model/Produto]]
-   @(d/transact conn produtos))
-  ; update parcial, bom para updates concorrentes
-  ([conn
-    produtos :- [model/Produto]
-    keywords :- [s/Keyword]]
-   (let [parcial (map #(select-keys % keywords) produtos)]
-     @(d/transact conn parcial))))
 
-(s/defn atualiza-categorias! [conn categorias :- [model/Categoria]]
-  @(d/transact conn categorias))
+(defn make-atualizador-entidade [schema]
+  (s/fn 
+    ([id-key :- (model/keyof schema)
+      conn
+      entidades :- [schema]]
+     (d/transact conn entidades))
+    ; update parcial, bom para updates concorrentes
+    ([id-key :- (model/keyof schema)
+      conn
+      entidades :- [schema]
+      keywords :- [(model/keyof schema)]]
+     (let [keys-with-id (conj keywords id-key)
+           parcial (map #(select-keys % keys-with-id) entidades)]
+       (d/transact conn parcial)))))
 
+(def atualiza-produtos! 
+  (partial (make-atualizador-entidade model/Produto) :produto/id))
+
+(def atualiza-categorias! 
+  (partial (make-atualizador-entidade model/Categoria) :categoria/id))
+
+
+; (s/defn atualiza-produtos!
+;   ([conn produtos :- [model/Produto]] (d/transact conn produtos))
+;   ; update parcial, bom para updates concorrentes
+;   ([conn
+;     produtos :- [model/Produto]
+;     keywords :- [(model/keyof model/Produto)]]
+;    (let [keys-with-id (conj keywords :produto/id)
+;          parcial (map #(select-keys % keys-with-id) produtos)]
+;      (d/transact conn parcial))))
+
+; (s/defn atualiza-categorias!
+;   ([conn categorias :- [model/Categoria]] (d/transact conn categorias))
+;   ; update parcial, bom para updates concorrentes
+;   ([conn
+;     categorias :- [model/Categoria]
+;     keywords :- [(model/keyof model/Categoria)]]
+;    (let [keys-with-id (conj keywords :categoria/id)
+;          parcial (map #(select-keys % keys-with-id) categorias)]
+;      (d/transact conn parcial))))
 
 (defn cria-dados-exemplo [conn]
   (let [; categorias

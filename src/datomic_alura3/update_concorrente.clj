@@ -28,7 +28,7 @@
                     (db/produto-por-id produto-id)
                     (sleep 3000)
                     (assoc :produto/preco 999M))]
-        (db/atualiza-produtos! conn [produto] [:produto/id :produto/preco])
+        (db/atualiza-produtos! conn [produto] [:produto/preco])
         (println "preco atualizado")
         produto))
 
@@ -39,7 +39,7 @@
                     (db/produto-por-id produto-id)
                     (sleep 1000)
                     (assoc :produto/slug "/jogo-de-dama"))]
-        (db/atualiza-produtos! conn [produto] [:produto/id :produto/slug])
+        (db/atualiza-produtos! conn [produto] [:produto/slug])
         (println "slug atualizado")
         produto))
 

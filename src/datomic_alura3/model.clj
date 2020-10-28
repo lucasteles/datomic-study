@@ -1,10 +1,12 @@
 (ns datomic-alura3.model
   (:require [schema.core :as s]))
 
+(defn keyof [schema] 
+  (apply s/enum (keys schema)))
 
 (s/defschema Categoria
   #:categoria {:nome s/Str
-               :id    java.util.UUID })
+               :id   java.util.UUID })
 
 (s/defschema Produto
   #:produto {:nome s/Str
