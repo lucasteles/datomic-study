@@ -36,6 +36,4 @@
 (db/todos-produtos-por-categoria (d/db conn) "Eletronicos")
 (db/todos-produtos-por-categoria (d/db conn) "Esportes")
 
-(db/todos-produtos-por-categoria-completo (d/db conn) "Eletronicos")
-
 (db/todos-produtos-por-categoria-backward (d/db conn) "Eletronicos")

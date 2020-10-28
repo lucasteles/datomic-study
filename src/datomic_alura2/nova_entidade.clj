@@ -38,6 +38,5 @@
                   :produto/categoria [:categoria/id id-cat-esportes]]
                   ])
 
-
 (println "busca produtos")
 (db/todos-produtos (d/db conn))

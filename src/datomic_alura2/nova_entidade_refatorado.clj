@@ -1,4 +1,4 @@
-(ns datomic-alura2.inserir_entidade
+(ns datomic-alura2.inserir_entidade_com_ref
   (:require [datomic-alura2.db :as db]
             [datomic.api :as d]
             [datomic-alura2.model :as model]
@@ -21,4 +21,7 @@
 
 (println "busca nomes de produtos e categorias")
 (db/todos-produtos-por-categoria-completo (d/db conn) "Eletronicos")
+
+
+
 

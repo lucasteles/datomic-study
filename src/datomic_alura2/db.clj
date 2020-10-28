@@ -115,14 +115,10 @@
                 ]]
     (d/q query db nome-categoria)))
 
-(defn todos-produtos-por-categoria-completo [db nome-categoria]
+(defn todos-produtos-com-categoria [db]
   (let [query '[:find (pull ?produto [* {:produto/categoria [*]}])
-                :in $ ?nome-categoria
-                :where
-                [?categoria :categoria/nome ?nome-categoria]
-                [?produto :produto/categoria ?categoria]
-                ]]
-    (d/q query db nome-categoria)))
+                :where [?produto :produto/id]]]
+    (d/q query db)))
 
 (defn todos-produtos-por-categoria-backward [db nome-categoria]
   (let [query '[:find (pull ?categoria [:categoria/nome
@@ -131,5 +127,20 @@
                 :where [?categoria :categoria/nome ?nome-categoria]]]
     (d/q query db nome-categoria)))
 
+; datomic atua por conjuntos, conta o mesmo preco apenas uma vez
+; por isso usar o with
+(defn resumo-produtos [db]
+  (d/q '[:find  (min ?preco) (max ?preco) (count ?preco)
+         :with ?e
+         :where [?e :produto/preco ?preco]] db))
+
+(defn resumo-produtos-por-categoria [db]
+  (d/q '[:find ?nome (min ?preco) (max ?preco) (count ?preco) (sum ?preco)
+         :keys categoria minimo maximo quantidade total
+         :with ?produto
+         :where [?produto :produto/preco ?preco]
+                [?produto :produto/categoria ?categoria]
+                [?categoria :categoria/nome ?nome]] 
+       db))
 
 
