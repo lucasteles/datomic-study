@@ -3,6 +3,7 @@
     [datomic.api :as d]
     [schema.core :as s]
     [clojure.walk :as walk]
+    [clojure.set :as cset]
     [datomic-alura3.model :as model]))
 
 (def db-uri "datomic:dev://localhost:4334/ecommerce")
@@ -133,10 +134,10 @@
         xadres (model/novo-produto  "Xadres" "/xadres" 700M 0)
         celular (model/novo-produto  "Celular" "/celular" 100M 12)
         teclado (model/novo-produto  "Teclado" "/teclado" 100M 0)
-        jogo (assoc  (model/novo-produto  "Jogo digital" "/jogo" 100M 0) :produto/digital true)]
+        jogo (assoc (model/novo-produto  "Jogo digital" "/jogo" 100M 0) :produto/digital true)]
     (atualiza-categorias! conn [eletronicos esportes])
     (atualiza-produtos! conn [computador xadres celular teclado jogo])
-    (atribui-categorias! conn eletronicos [computador celular teclado])
+    (atribui-categorias! conn eletronicos [computador celular teclado jogo])
     (atribui-categorias! conn esportes [xadres])))
 
 
@@ -194,6 +195,10 @@
     [(pode-vender? ?produto)
      (estoque ?produto ?estoque)
      [(> ?estoque 0)]]
+
+    [(produto-na-categoria ?produto ?nome-categoria)
+     [?categoria :categoria/nome ?nome]
+     [?produto :produto/categoria ?categoria]]
     ])
 
 (s/defn todos-produtos-com-estoque  :- [model/Produto] [db]
@@ -213,5 +218,44 @@
         retorno (datomic->entidade resultado)]
     (print resultado)
     (if (:produto/id retorno) retorno nil)))
+
+(s/defn produto-nas-categorias :- [model/Produto]
+  [db categorias :- [s/Str]]
+  (let [query '[:find [(pull ?produto [* {:produto/categoria [*]}]) ...]
+                :in $ % [?nome ...]
+                :where (produto-na-categoria ?produto ?nome)]
+        resultado (d/q query db regras categorias)]
+    (datomic->entidade resultado)))
+
+
+(s/defn produto-nas-categorias-e-digital :- [model/Produto]
+  [db categorias :- [s/Str] digital? :- s/Bool]
+  (let [query '[:find [(pull ?produto [* {:produto/categoria [*]}]) ...]
+                :in $ % [?nome ...] ?digital?
+                :where (produto-na-categoria ?produto ?nome)
+                       [?produto :produto/digital ?digital?]]
+        resultado (d/q query db regras categorias digital?)]
+    (datomic->entidade resultado )))
+
+(s/defn atualiza-preco! 
+  [conn
+   id :- java.util.UUID 
+   preco-antigo :- BigDecimal
+   preco-novo :- BigDecimal] 
+  (d/transact conn [[:db/cas [:produto/id id] :produto/preco preco-antigo preco-novo]]))
+
+
+(s/defn atualiza-produtos-cas! 
+  [conn
+   produto   :- model/Produto
+   atualizar :- (model/partial-schema model/Produto)]
+  (let [id (:produto/id produto)
+        atributos (cset/intersection (-> produto keys set) (-> atualizar keys set))
+        to-cas (fn [att] [:db/cas [:produto/id id] att (get produto att) (get atualizar att)])
+        txs (map to-cas atributos)]
+    (d/transact conn txs)))
+
+
+
 
 
