@@ -43,6 +43,10 @@
               :db/valueType   :db.type/ref
               :db/cardinality :db.cardinality/one}
 
+             {:db/ident       :produto/estoque
+              :db/valueType   :db.type/long
+              :db/cardinality :db.cardinality/one}
+
              {:db/ident       :categoria/nome
               :db/valueType   :db.type/string
               :db/cardinality :db.cardinality/one }
@@ -61,27 +65,38 @@
         transactions (map add-categoria produtos)]
     @(d/transact conn transactions)))
 
+; update possivel de schemas parciais
+(s/defn atualiza-produtos!
+  [conn
+   entidades :- [(model/partial-schema model/Produto)]]
+  (d/transact conn entidades))
 
-(defn make-atualizador-entidade [schema]
-  (s/fn 
-    ([id-key :- (model/keyof schema)
-      conn
-      entidades :- [schema]]
-     (d/transact conn entidades))
-    ; update parcial, bom para updates concorrentes
-    ([id-key :- (model/keyof schema)
-      conn
-      entidades :- [schema]
-      keywords :- [(model/keyof schema)]]
-     (let [keys-with-id (conj keywords id-key)
-           parcial (map #(select-keys % keys-with-id) entidades)]
-       (d/transact conn parcial)))))
+(s/defn atualiza-categorias!
+  [conn
+   entidades :- [(model/partial-schema model/Categoria)]]
+  (d/transact conn entidades))
 
-(def atualiza-produtos! 
-  (partial (make-atualizador-entidade model/Produto) :produto/id))
+;;; receber a parte que deveria atualizar como pararmetto
+; (defn make-atualizador-entidade [schema]
+;   (s/fn
+;     ([id-key :- (model/keyof schema)
+;       conn
+;       entidades :- [schema]]
+;      (d/transact conn entidades))
+;     ; update parcial, bom para updates concorrentes
+;     ([id-key :- (model/keyof schema)
+;       conn
+;       entidades :- [schema]
+;       keywords :- [(model/keyof schema)]]
+;      (let [keys-with-id (conj keywords id-key)
+;            parcial (map #(select-keys % keys-with-id) entidades)]
+;        (d/transact conn parcial)))))
 
-(def atualiza-categorias! 
-  (partial (make-atualizador-entidade model/Categoria) :categoria/id))
+; (def atualiza-produtos!
+;   (partial (make-atualizador-entidade model/Produto) :produto/id))
+
+; (def atualiza-categorias!
+;   (partial (make-atualizador-entidade model/Categoria) :categoria/id))
 
 
 ; (s/defn atualiza-produtos!
@@ -109,10 +124,10 @@
         eletronicos (model/nova-categoria "Eletronicos")
         esportes (model/nova-categoria "Esportes")
         ; produtos
-        computador (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M)
-        xadres (model/novo-produto  "Xadres" "/xadres" 700M)
-        celular (model/novo-produto  "Celular" "/celular" 100M)
-        teclado (model/novo-produto  "Teclado" "/teclado" 100M)]
+        computador (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M 0)
+        xadres (model/novo-produto  "Xadres" "/xadres" 700M 10)
+        celular (model/novo-produto  "Celular" "/celular" 100M 12)
+        teclado (model/novo-produto  "Teclado" "/teclado" 100M 0)]
     (atualiza-categorias! conn [eletronicos esportes])
     (atualiza-produtos! conn [computador xadres celular teclado])
     (atribui-categorias! conn eletronicos [computador celular teclado])
@@ -142,15 +157,45 @@
         categorias (d/q query db)]
     (datomic->entidade categorias)))
 
-(s/defn produto-por-id :- model/Produto
+(s/defn produto-por-id :- (s/maybe model/Produto)
   [db id :- java.util.UUID]
   (->> [:produto/id id]
        (d/pull db '[* { :produto/categoria [*]}])
-       (datomic->entidade)))
+       datomic->entidade
+       (#(if (:produto/id %) % nil))))
+
+
+(s/defn produto-por-id-com-estoque :- (s/maybe model/Produto)
+  [db id :- java.util.UUID]
+  (let [query '[:find (pull ?produto [* {:produto/categoria [*]}]) . 
+                :in $ ?id
+                :where [?produto :produto/id ?id]
+                       [?produto :produto/estoque ?estoque]
+                       [(> ?estoque 0)] ]
+        resultado (d/q query db id)
+        retorno (datomic->entidade resultado)]
+    (if (:produto/id retorno) retorno nil)))
+
+
+(s/defn produto-por-id-feio!
+  [db id :- java.util.UUID]
+  (let [produto (produto-por-id db id)]
+    (when (nil? produto)
+      (throw (ex-info "Produto nao encontradoo"
+                      {:type :errors/not-found :id id})))))
 
 (s/defn todos-produtos  :- [model/Produto] [db]
   (let [query '[:find [(pull ?e [* {:produto/categoria [*]}]) ...]
                 :where [?e :produto/id]]
         resultado (d/q query db)]
     (datomic->entidade resultado)))
+
+(s/defn todos-produtos-com-estoque  :- [model/Produto] [db]
+  (let [query '[:find [(pull ?e [* {:produto/categoria [*]}]) ...]
+                :where [?e :produto/estoque ?estoque]
+                [(> ?estoque 0)]]
+        resultado (d/q query db)]
+    (datomic->entidade resultado)))
+
+
 

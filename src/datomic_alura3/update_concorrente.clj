@@ -27,8 +27,9 @@
         produto (-> (d/db conn) 
                     (db/produto-por-id produto-id)
                     (sleep 3000)
-                    (assoc :produto/preco 999M))]
-        (db/atualiza-produtos! conn [produto] [:produto/preco])
+                    (assoc :produto/preco 999M))
+        pedaço (select-keys produto [:produto/preco :produto/id])]
+        (db/atualiza-produtos! conn [pedaço])
         (println "preco atualizado")
         produto))
 
@@ -38,11 +39,11 @@
         produto (-> (d/db conn) 
                     (db/produto-por-id produto-id)
                     (sleep 1000)
-                    (assoc :produto/slug "/jogo-de-dama"))]
-        (db/atualiza-produtos! conn [produto] [:produto/slug])
+                    (assoc :produto/slug "/jogo-de-dama"))
+        pedaço (select-keys produto [:produto/slug :produto/id])] 
+        (db/atualiza-produtos! conn [produto])
         (println "slug atualizado")
         produto))
-
 
 (defn roda-transacoes [tx]
   (let [ futuros (mapv #(future (%)) tx)]

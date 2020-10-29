@@ -1,6 +1,5 @@
 (ns datomic-alura3.model
-  (:require [schema.core :as s]
-            [datomic-alura2.model :as model]))
+  (:require [schema.core :as s]))
 
 (defn keyof [schema]
   (apply s/enum (keys schema)))
@@ -24,16 +23,16 @@
 (defn uuid [] (java.util.UUID/randomUUID))
 
 (s/defn novo-produto :- Produto
-  ([nome         :- s/Str
-    slug         :- s/Str
-    preco        :- BigDecimal
-    estoque      :- s/Num]
-   (novo-produto (uuid) nome slug preco estoque))
-  ([uuid         :- java.util.UUID
-    nome         :- s/Str
-    slug         :- s/Str
-    preco        :- BigDecimal
-    estoque      :- s/Num]
+  ([ nome  :- s/Str
+    slug  :- s/Str
+    preco :- BigDecimal
+    estoque :- s/Num]
+   (novo-produto uuid nome slug preco 0))
+  ([uuid  :- java.util.UUID
+    nome  :- s/Str
+    slug  :- s/Str
+    preco :- BigDecimal
+    estoque :- s/Num]
    #:produto {:id uuid
               :nome nome
               :slug slug
