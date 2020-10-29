@@ -15,29 +15,29 @@
   (d/delete-database db-uri))
 
 
-(def schema [{:db/ident         :produto/nome
-              :db/valueType     :db.type/string
-              :db/cardinality   :db.cardinality/one
-              :db/doc           "O nome de um produto"}
+(def schema [{:db/ident       :produto/nome
+              :db/valueType   :db.type/string
+              :db/cardinality :db.cardinality/one
+              :db/doc         "O nome de um produto"}
 
-             {:db/ident         :produto/slug
-              :db/valueType     :db.type/string
-              :db/cardinality   :db.cardinality/one
-              :db/doc           "O caminho para acessar esse produto via http"}
+             {:db/ident       :produto/slug
+              :db/valueType   :db.type/string
+              :db/cardinality :db.cardinality/one
+              :db/doc         "O caminho para acessar esse produto via http"}
 
-             {:db/ident         :produto/preco
-              :db/valueType     :db.type/bigdec
-              :db/cardinality   :db.cardinality/one
-              :db/doc           "O preço de um produto com precisão monetária"}
+             {:db/ident       :produto/preco
+              :db/valueType   :db.type/bigdec
+              :db/cardinality :db.cardinality/one
+              :db/doc         "O preço de um produto com precisão monetária"}
 
-             {:db/ident         :produto/palavra-chave
-              :db/valueType     :db.type/string
-              :db/cardinality   :db.cardinality/many }
+             {:db/ident       :produto/palavra-chave
+              :db/valueType   :db.type/string
+              :db/cardinality :db.cardinality/many }
 
-             {:db/ident         :produto/id
-              :db/valueType     :db.type/uuid
-              :db/cardinality   :db.cardinality/one
-              :db/unique        :db.unique/identity}
+             {:db/ident       :produto/id
+              :db/valueType   :db.type/uuid
+              :db/cardinality :db.cardinality/one
+              :db/unique      :db.unique/identity}
 
              {:db/ident       :produto/categoria
               :db/valueType   :db.type/ref
@@ -46,6 +46,11 @@
              {:db/ident       :produto/estoque
               :db/valueType   :db.type/long
               :db/cardinality :db.cardinality/one}
+
+             {:db/ident       :produto/digital
+              :db/valueType   :db.type/boolean
+              :db/cardinality :db.cardinality/one}
+
 
              {:db/ident       :categoria/nome
               :db/valueType   :db.type/string
@@ -124,12 +129,13 @@
         eletronicos (model/nova-categoria "Eletronicos")
         esportes (model/nova-categoria "Esportes")
         ; produtos
-        computador (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M 0)
-        xadres (model/novo-produto  "Xadres" "/xadres" 700M 10)
+        computador (model/novo-produto  "Computador Novo" "/computador_novo" 2499.10M 10)
+        xadres (model/novo-produto  "Xadres" "/xadres" 700M 0)
         celular (model/novo-produto  "Celular" "/celular" 100M 12)
-        teclado (model/novo-produto  "Teclado" "/teclado" 100M 0)]
+        teclado (model/novo-produto  "Teclado" "/teclado" 100M 0)
+        jogo (assoc  (model/novo-produto  "Jogo digital" "/jogo" 100M 0) :produto/digital true)]
     (atualiza-categorias! conn [eletronicos esportes])
-    (atualiza-produtos! conn [computador xadres celular teclado])
+    (atualiza-produtos! conn [computador xadres celular teclado jogo])
     (atribui-categorias! conn eletronicos [computador celular teclado])
     (atribui-categorias! conn esportes [xadres])))
 
@@ -164,19 +170,6 @@
        datomic->entidade
        (#(if (:produto/id %) % nil))))
 
-
-(s/defn produto-por-id-com-estoque :- (s/maybe model/Produto)
-  [db id :- java.util.UUID]
-  (let [query '[:find (pull ?produto [* {:produto/categoria [*]}]) . 
-                :in $ ?id
-                :where [?produto :produto/id ?id]
-                       [?produto :produto/estoque ?estoque]
-                       [(> ?estoque 0)] ]
-        resultado (d/q query db id)
-        retorno (datomic->entidade resultado)]
-    (if (:produto/id retorno) retorno nil)))
-
-
 (s/defn produto-por-id-feio!
   [db id :- java.util.UUID]
   (let [produto (produto-por-id db id)]
@@ -190,12 +183,35 @@
         resultado (d/q query db)]
     (datomic->entidade resultado)))
 
+
+; definido regras
+(def regras 
+  '[[(estoque ?produto ?estoque)
+     [?produto :produto/estoque ?estoque]]
+    [(estoque ?produto ?estoque)
+     [?produto :produto/digital true]
+     [(ground 1) ?estoque]]
+    [(pode-vender? ?produto)
+     (estoque ?produto ?estoque)
+     [(> ?estoque 0)]]
+    ])
+
 (s/defn todos-produtos-com-estoque  :- [model/Produto] [db]
   (let [query '[:find [(pull ?e [* {:produto/categoria [*]}]) ...]
-                :where [?e :produto/estoque ?estoque]
-                [(> ?estoque 0)]]
-        resultado (d/q query db)]
+                :in $ %
+                :where (pode-vender? ?e)]
+        resultado (d/q query db regras)]
     (datomic->entidade resultado)))
 
+(s/defn produto-por-id-com-estoque :- (s/maybe model/Produto)
+  [db id :- java.util.UUID]
+  (let [query '[:find (pull ?produto [* {:produto/categoria [*]}]) . 
+                :in $ % ?id
+                :where [?produto :produto/id ?id]
+                       (pode-vender? ?produto) ]
+        resultado (d/q query db regras id )
+        retorno (datomic->entidade resultado)]
+    (print resultado)
+    (if (:produto/id retorno) retorno nil)))
 
 

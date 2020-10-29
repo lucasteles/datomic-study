@@ -18,6 +18,7 @@
              :preco BigDecimal
              :id  java.util.UUID
              :estoque s/Num
+             :digital s/Bool
              (s/optional-key :produto/palavra-chave) [s/Str]
              (s/optional-key :produto/categoria) Categoria })
 
@@ -38,7 +39,8 @@
               :nome nome
               :slug slug
               :preco preco
-              :estoque estoque}))
+              :estoque estoque
+              :digital false}))
 
 (s/defn nova-categoria :- Categoria
   ([nome :- s/Str ]
