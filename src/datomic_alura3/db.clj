@@ -217,7 +217,7 @@
      [(> ?estoque 0)]]
 
     [(produto-na-categoria ?produto ?nome-categoria)
-     [?categoria :categoria/nome ?nome]
+     [?categoria :categoria/nome ?nome-categoria]
      [?produto :produto/categoria ?categoria]]
     ])
 
@@ -252,7 +252,7 @@
   [db categorias :- [s/Str] digital? :- s/Bool]
   (let [query '[:find [(pull ?produto [* {:produto/categoria [*]}]) ...]
                 :in $ % [?nome ...] ?digital?
-                :where (produto-na-categoria ?produto ?nome)
+                :where (produto-na-categoria ?produto ?nome) 
                 [?produto :produto/digital ?digital?]]
         resultado (d/q query db regras categorias digital?)]
     (datomic->entidade resultado )))
