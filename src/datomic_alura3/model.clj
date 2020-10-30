@@ -20,7 +20,8 @@
              :estoque s/Num
              :digital s/Bool
              (s/optional-key :produto/palavra-chave) [s/Str]
-             (s/optional-key :produto/categoria) Categoria })
+             (s/optional-key :produto/categoria) Categoria
+             (s/optional-key :produto/variacao) [s/Any] })
 
 (defn uuid [] (java.util.UUID/randomUUID))
 

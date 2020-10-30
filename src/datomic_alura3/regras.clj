@@ -5,7 +5,7 @@
             [schema.core :as s]
             [clojure.pprint :refer [pprint]]))
 
-(s/set-fn-validation! false)
+(s/set-fn-validation! true)
 (def conn (db/recria-banco))
 (db/cria-dados-exemplo conn)
 (db/todos-produtos-com-estoque (d/db conn))

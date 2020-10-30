@@ -52,6 +52,21 @@
               :db/valueType   :db.type/boolean
               :db/cardinality :db.cardinality/one}
 
+             {:db/ident       :produto/variacao
+              :db/valueType   :db.type/ref
+              :db/isComponent true
+              :db/cardinality :db.cardinality/many}
+
+             {:db/ident       :variacao/id
+              :db/valueType   :db.type/uuid
+              :db/cardinality :db.cardinality/one
+              :db/unique      :db.unique/identity}
+             {:db/ident :variacao/nome
+              :db/valueType   :db.type/string
+              :db/cardinality :db.cardinality/one }
+             {:db/ident :variacao/preco
+              :db/valueType   :db.type/bigdec
+              :db/cardinality :db.cardinality/one}
 
              {:db/ident       :categoria/nome
               :db/valueType   :db.type/string
@@ -167,7 +182,7 @@
 (s/defn produto-por-id :- (s/maybe model/Produto)
   [db id :- java.util.UUID]
   (->> [:produto/id id]
-       (d/pull db '[* { :produto/categoria [*]}])
+       (d/pull db '[* {:produto/categoria [*]}])
        datomic->entidade
        (#(if (:produto/id %) % nil))))
 
@@ -186,7 +201,7 @@
 
 
 ; definido regras
-(def regras 
+(def regras
   '[[(estoque ?produto ?estoque)
      [?produto :produto/estoque ?estoque]]
     [(estoque ?produto ?estoque)
@@ -210,10 +225,10 @@
 
 (s/defn produto-por-id-com-estoque :- (s/maybe model/Produto)
   [db id :- java.util.UUID]
-  (let [query '[:find (pull ?produto [* {:produto/categoria [*]}]) . 
+  (let [query '[:find (pull ?produto [* {:produto/categoria [*]}]) .
                 :in $ % ?id
                 :where [?produto :produto/id ?id]
-                       (pode-vender? ?produto) ]
+                (pode-vender? ?produto) ]
         resultado (d/q query db regras id )
         retorno (datomic->entidade resultado)]
     (print resultado)
@@ -233,19 +248,19 @@
   (let [query '[:find [(pull ?produto [* {:produto/categoria [*]}]) ...]
                 :in $ % [?nome ...] ?digital?
                 :where (produto-na-categoria ?produto ?nome)
-                       [?produto :produto/digital ?digital?]]
+                [?produto :produto/digital ?digital?]]
         resultado (d/q query db regras categorias digital?)]
     (datomic->entidade resultado )))
 
-(s/defn atualiza-preco! 
+(s/defn atualiza-preco!
   [conn
-   id :- java.util.UUID 
+   id :- java.util.UUID
    preco-antigo :- BigDecimal
-   preco-novo :- BigDecimal] 
+   preco-novo :- BigDecimal]
   (d/transact conn [[:db/cas [:produto/id id] :produto/preco preco-antigo preco-novo]]))
 
 
-(s/defn atualiza-produtos-cas! 
+(s/defn atualiza-produtos-cas!
   [conn
    produto   :- model/Produto
    atualizar :- (model/partial-schema model/Produto)]
@@ -255,7 +270,26 @@
         txs (map to-cas atributos)]
     (d/transact conn txs)))
 
+(s/defn add-variacao!
+  [conn
+   produto-id :- java.util.UUID
+   nome :- s/Str
+   preco :- BigDecimal]
+  (d/transact conn
+              [{:db/id "variacao-temp"
+                :variacao/id (model/uuid)
+                :variacao/preco preco
+                :variacao/nome nome }
+               #:produto {:id produto-id
+                          :variacao "variacao-temp"}]))
 
 
+(defn total-de-produtos [db]
+  (d/q '[:find [(count ?produto)]
+         :where [?produto :produto/nome]]
+       db))
 
-
+(s/defn remover-produto!
+  [conn produto-id :- java.util.UUID ]
+  (d/transact conn [[:db/retractEntity
+                     [:produto/id produto-id]]]))
