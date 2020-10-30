@@ -57,6 +57,11 @@
               :db/isComponent true
               :db/cardinality :db.cardinality/many}
 
+             {:db/ident       :produto/visualizacoes
+              :db/valueType   :db.type/long
+              :db/noHistory   true
+              :db/cardinality :db.cardinality/one}
+
              {:db/ident       :variacao/id
               :db/valueType   :db.type/uuid
               :db/cardinality :db.cardinality/one
@@ -85,6 +90,12 @@
                        :produto/categoria [:categoria/id (:categoria/id categoria)]])
         transactions (map add-categoria produtos)]
     @(d/transact conn transactions)))
+
+(defn recria-banco []
+  (apaga-banco)
+  (let [conn (abre-conexao)]
+    (d/transact conn schema)
+    conn))
 
 ; update possivel de schemas parciais
 (s/defn atualiza-produtos!
@@ -155,12 +166,6 @@
     (atribui-categorias! conn eletronicos [computador celular teclado jogo])
     (atribui-categorias! conn esportes [xadres])))
 
-
-(defn recria-banco []
-  (apaga-banco)
-  (let [conn (abre-conexao)]
-    (d/transact conn schema)
-    conn))
 
 
 (defn remove-deep [key-set data]
@@ -285,7 +290,7 @@
 
 
 (defn total-de-produtos [db]
-  (d/q '[:find [(count ?produto)]
+  (d/q '[:find (count ?produto) .
          :where [?produto :produto/nome]]
        db))
 
@@ -293,3 +298,49 @@
   [conn produto-id :- java.util.UUID ]
   (d/transact conn [[:db/retractEntity
                      [:produto/id produto-id]]]))
+
+
+
+(s/defn visualizacoes [db produto-id :- java.util.UUID]
+  (or (d/q '[:find ?visualizacoes .
+             :in $ ?id
+             :where [?produto :produto/visualizacoes ?visualizacoes]]
+           db produto-id)
+      0))
+
+;; nao é atomico
+; (s/defn visualizacao!
+;   [conn
+;    produto-id :- java.util.UUID]
+;   (let [ate-agora (visualizacoes (d/db conn) produto-id)
+;         novo-valor (inc ate-agora)]
+;     (d/transact conn
+;                 [{:produto/id            produto-id
+;                   :produto/visualizacoes novo-valor}])))
+
+(def incrementa-visualizacao
+  #db/fn {:lang :clojure
+          :params [db produto-id]
+          :code
+          (let [visualizacoes (d/q '[:find ?visualizacoes .
+                                     :in $ ?id
+                                     :where [?produto :produto/visualizacoes ?visualizacoes]]
+                                   db produto-id)
+                atual (or visualizacoes 0)
+                novo-valor (inc atual)]
+            [{:produto/id            produto-id
+              :produto/visualizacoes novo-valor}])})
+
+(defn instala-funcoes [conn] 
+  (d/transact conn [{:db/doc "funcao que incremente visualizacao de produto"
+                     :db/ident :incrementa-visualizacao
+                     :db/fn incrementa-visualizacao}]))
+
+(s/defn visualizacao!
+  [conn
+   produto-id :- java.util.UUID]
+  (d/transact conn [[:incrementa-visualizacao produto-id]]))
+
+
+
+
