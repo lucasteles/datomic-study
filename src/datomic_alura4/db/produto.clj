@@ -80,7 +80,7 @@
   [db categorias :- [s/Str] digital? :- s/Bool]
   (let [query '[:find [(pull ?produto [* {:produto/categoria [*]}]) ...]
                 :in $ % [?nome ...] ?digital?
-                :where (na-categoria ?produto ?nome) 
+                :where (na-categoria ?produto ?nome)
                 [?produto :produto/digital ?digital?]]
         resultado (d/q query db regras categorias digital?)]
     (entidade/datomic->entidade resultado )))
@@ -135,7 +135,7 @@
             [{:produto/id            id
               :produto/visualizacoes novo-valor}])})
 
-(defn instala-funcoes [conn] 
+(defn instala-funcoes [conn]
   (d/transact conn [{:db/doc "funcao que incremente visualizacao de produto"
                      :db/ident :incrementa-visualizacao
                      :db/fn incrementa-visualizacao}]))
@@ -144,4 +144,14 @@
   [conn
    id :- java.util.UUID]
   (d/transact conn [[:incrementa-visualizacao id]]))
+
+
+(s/defn historico-precos [db produto-id :- java.util.UUID]
+  (->> (d/q '[:find ?instante ?preco
+              :in $ ?id
+              :where [?produto :produto/id ?id]
+              [?produto :produto/preco ?preco ?tx true]
+              [?tx :db/txInstant ?instante]]
+       (d/history db) produto-id)
+       (sort-by first)))
 
